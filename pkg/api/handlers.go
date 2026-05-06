@@ -7,6 +7,10 @@ import (
 
 // NextDateHandler обрабатывает GET-запрос /api/nextdate
 func NextDateHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		writeJSON(w, http.StatusMethodNotAllowed, map[string]string{"error": "метод не поддерживается"})
+		return
+	}
 	nowParam := r.FormValue("now")
 	dateParam := r.FormValue("date")
 	repeatParam := r.FormValue("repeat")

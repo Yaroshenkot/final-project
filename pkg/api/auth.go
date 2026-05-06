@@ -10,17 +10,30 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-// secretKey возвращает ключ для подписи JWT на основе пароля
+// Config — конфигурация приложения
+type Config struct {
+	Password string
+}
+
+var AppConfig Config
+
+// InitConfig считывает конфигурацию один раз на старте
+func InitConfig() {
+	AppConfig.Password = os.Getenv("TODO_PASSWORD")
+}
+
+// secretKey возвращает ключ для подписи JWT
 func secretKey() []byte {
-	pass := os.Getenv("TODO_PASSWORD")
-	hash := sha256.Sum256([]byte(pass))
+	hash := sha256.Sum256([]byte(AppConfig.Password))
 	return []byte(fmt.Sprintf("%x", hash))
 }
 
 // GenerateToken создаёт JWT-токен
 func GenerateToken() (string, error) {
+	passHash := fmt.Sprintf("%x", sha256.Sum256([]byte(AppConfig.Password)))
+
 	claims := jwt.MapClaims{
-		"hash": fmt.Sprintf("%x", sha256.Sum256([]byte(os.Getenv("TODO_PASSWORD")))),
+		"hash": passHash,
 		"exp":  time.Now().Add(8 * time.Hour).Unix(),
 	}
 
@@ -42,7 +55,7 @@ func ValidateToken(tokenString string) (bool, error) {
 	}
 
 	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-		expectedHash := fmt.Sprintf("%x", sha256.Sum256([]byte(os.Getenv("TODO_PASSWORD"))))
+		expectedHash := fmt.Sprintf("%x", sha256.Sum256([]byte(AppConfig.Password)))
 		if claims["hash"] == expectedHash {
 			return true, nil
 		}
@@ -54,8 +67,7 @@ func ValidateToken(tokenString string) (bool, error) {
 // auth — middleware для проверки аутентификации
 func auth(next http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		pass := os.Getenv("TODO_PASSWORD")
-		if len(pass) > 0 {
+		if len(AppConfig.Password) > 0 {
 			var jwtToken string
 			cookie, err := r.Cookie("token")
 			if err == nil {

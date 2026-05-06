@@ -17,31 +17,31 @@ func addTaskHandler(w http.ResponseWriter, r *http.Request) {
 
 	// 1. Десериализуем JSON
 	if err = json.NewDecoder(r.Body).Decode(&task); err != nil {
-		writeJSON(w, map[string]string{"error": "ошибка десериализации JSON"})
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "ошибка десериализации JSON"})
 		return
 	}
 
 	// 2. Проверяем заголовок
 	if task.Title == "" {
-		writeJSON(w, map[string]string{"error": "не указан заголовок задачи"})
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "не указан заголовок задачи"})
 		return
 	}
 
 	// 3. Проверяем дату и правило повторения
 	if err = checkDate(&task); err != nil {
-		writeJSON(w, map[string]string{"error": err.Error()})
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 		return
 	}
 
 	// 4. Добавляем задачу в БД
 	id, err := db.AddTask(&task)
 	if err != nil {
-		writeJSON(w, map[string]string{"error": err.Error()})
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
 	}
 
 	// 5. Возвращаем ID
-	writeJSON(w, map[string]string{"id": toString(id)})
+	writeJSON(w, http.StatusOK, map[string]string{"id": toString(id)})
 }
 
 // checkDate проверяет и корректирует дату задачи
@@ -81,9 +81,12 @@ func checkDate(task *db.Task) error {
 }
 
 // writeJSON записывает данные в формате JSON
-func writeJSON(w http.ResponseWriter, data any) {
+func writeJSON(w http.ResponseWriter, statusCode int, data any) {
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-	json.NewEncoder(w).Encode(data)
+	w.WriteHeader(statusCode)
+	if err := json.NewEncoder(w).Encode(data); err != nil {
+		http.Error(w, "ошибка формирования ответа", http.StatusInternalServerError)
+	}
 }
 
 // toString преобразует int64 в строку

@@ -15,8 +15,5 @@ WORKDIR /app
 COPY --from=builder /app/scheduler .
 COPY --from=builder /app/web ./web
 
-EXPOSE 7540
-
-ENV TODO_PORT=7540
 
 CMD ["./scheduler"]

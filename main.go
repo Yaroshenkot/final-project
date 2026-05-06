@@ -10,6 +10,9 @@ import (
 )
 
 func main() {
+
+	api.InitConfig()
+
 	// Инициализируем БД
 	dbFile := "scheduler.db"
 	if envDBFile := os.Getenv("TODO_DBFILE"); envDBFile != "" {
@@ -34,5 +37,7 @@ func main() {
 	}
 
 	log.Printf("Сервер запущен на http://localhost:%s", port)
-	log.Fatal(http.ListenAndServe(":"+port, nil))
+	if err := http.ListenAndServe(":"+port, nil); err != nil {
+		log.Printf("ошибка сервера: %v", err)
+	}
 }
